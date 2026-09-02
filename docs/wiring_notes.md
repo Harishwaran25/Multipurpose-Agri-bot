@@ -16,6 +16,10 @@
 ## BTS7960 Enable Pins
 - `R_EN` and `L_EN` on each BTS7960 module are tied together and driven from a single Mega pin per driver (see pin map in the main README). They're set `HIGH` once in `setup()`.
 
+## Scissor Driver (BTS7960 #4)
+- Wired directly to a single motor — unlike the aux driver, it is **not** shared through the relay module, so the scissor can run at the same time as the cutter/pump/lead-screw.
+- Uses its own RPWM/LPWM/EN pins (8/9/25) — chosen to avoid overlap with the wheel and aux drivers' pins (2-7, 22-24).
+
 ## Suggested Additions
 - Limit switches at both ends of the lead screw travel, wired to interrupt pins, to auto-cut power on full extend/retract and prevent motor stall.
 - A low-voltage cutoff or battery monitor to protect the Li-ion packs from over-discharge.

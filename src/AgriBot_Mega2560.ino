@@ -5,14 +5,17 @@
   Control: Bluetooth (HC-05) via "Arduino Bluetooth Controller" app (Broxcode)
            - Joystick pad  -> movement (skid-steer, left pair / right pair)
            - Buttons 1-4   -> cutter, pump, lead screw extend/retract
+           - Buttons 5-6   -> scissor expand/retract
 
-  Drivers: 3x BTS7960 high-current motor drivers
+  Drivers: 4x BTS7960 high-current motor drivers
            #1 -> Left wheel pair (2 motors wired in parallel)
            #2 -> Right wheel pair (2 motors wired in parallel)
            #3 -> Shared "aux" driver. A 3-channel relay module selects which
                  single motor (cutter / pump / lead screw) is actually
                  connected to its output at any given time — only one relay
                  is ever closed at once, so only one aux motor runs at once.
+           #4 -> Dedicated driver for the scissor mechanism (separate
+                 implement, not routed through the aux relay selector).
 
   HC-05:   Wired to Serial1 (TX1=pin18, RX1=pin19) — Mega has 4 hardware
            UARTs, so no SoftwareSerial needed. Wire HC-05 TX -> Mega RX1,
@@ -37,6 +40,11 @@ const int AUX_RPWM = 6;
 const int AUX_LPWM = 7;
 const int AUX_EN   = 24;
 
+// ---------- SCISSOR DRIVER (BTS7960 #4, dedicated — not on aux relay) ----------
+const int SCISSOR_RPWM = 8;
+const int SCISSOR_LPWM = 9;
+const int SCISSOR_EN   = 25;   // tie BTS7960 R_EN + L_EN together to this pin
+
 // ---------- RELAYS: select which implement is on the aux driver ----------
 const int RELAY_CUTTER    = 26;
 const int RELAY_PUMP      = 27;
@@ -47,8 +55,9 @@ const int RELAY_ON  = LOW;
 const int RELAY_OFF = HIGH;
 
 // ---------- SPEEDS (0-255) ----------
-const int DRIVE_SPEED = 180;   // wheel motor speed
-const int AUX_SPEED   = 200;   // cutter/pump/lead-screw speed
+const int DRIVE_SPEED   = 180;   // wheel motor speed
+const int AUX_SPEED     = 200;   // cutter/pump/lead-screw speed
+const int SCISSOR_SPEED = 200;   // scissor expand/retract speed
 
 // ---------- STATE ----------
 bool cutterOn = false;
@@ -65,6 +74,7 @@ void setup() {
   pinMode(LEFT_RPWM, OUTPUT);  pinMode(LEFT_LPWM, OUTPUT);  pinMode(LEFT_EN, OUTPUT);
   pinMode(RIGHT_RPWM, OUTPUT); pinMode(RIGHT_LPWM, OUTPUT); pinMode(RIGHT_EN, OUTPUT);
   pinMode(AUX_RPWM, OUTPUT);   pinMode(AUX_LPWM, OUTPUT);   pinMode(AUX_EN, OUTPUT);
+  pinMode(SCISSOR_RPWM, OUTPUT); pinMode(SCISSOR_LPWM, OUTPUT); pinMode(SCISSOR_EN, OUTPUT);
 
   pinMode(RELAY_CUTTER, OUTPUT);
   pinMode(RELAY_PUMP, OUTPUT);
@@ -76,6 +86,7 @@ void setup() {
   digitalWrite(LEFT_EN, HIGH);
   digitalWrite(RIGHT_EN, HIGH);
   digitalWrite(AUX_EN, HIGH);
+  digitalWrite(SCISSOR_EN, HIGH);
 
   stopAll();
   lastCmdTime = millis();
@@ -144,6 +155,24 @@ void handleCommand(char cmd) {
       allRelaysOff();
       break;
 
+    // ---- Button 5: scissor EXPAND (momentary — '5' on press, 'x' on
+    //      release). Dedicated driver, independent of the aux relay. ----
+    case '5':
+      scissorRun(SCISSOR_SPEED);
+      break;
+    case 'x':
+      scissorRun(0);
+      break;
+
+    // ---- Button 6: scissor RETRACT (momentary — '6' on press, 'y' on
+    //      release) ----
+    case '6':
+      scissorRun(-SCISSOR_SPEED);
+      break;
+    case 'y':
+      scissorRun(0);
+      break;
+
     default:
       break; // ignore unknown bytes
   }
@@ -169,6 +198,12 @@ void auxRun(int speed) {
   else                { analogWrite(AUX_RPWM, 0);       analogWrite(AUX_LPWM, 0); }
 }
 
+void scissorRun(int speed) {
+  if (speed > 0)      { analogWrite(SCISSOR_RPWM, speed);  analogWrite(SCISSOR_LPWM, 0); }
+  else if (speed < 0) { analogWrite(SCISSOR_RPWM, 0);       analogWrite(SCISSOR_LPWM, -speed); }
+  else                { analogWrite(SCISSOR_RPWM, 0);       analogWrite(SCISSOR_LPWM, 0); }
+}
+
 void selectAux(int relayPin) {
   allRelaysOff();          // make sure only one path is ever live
   digitalWrite(relayPin, RELAY_ON);
@@ -184,6 +219,7 @@ void stopAll() {
   driveLeft(0);
   driveRight(0);
   auxRun(0);
+  scissorRun(0);
   allRelaysOff();
   cutterOn = false;
   pumpOn = false;

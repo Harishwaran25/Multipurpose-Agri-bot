@@ -1,6 +1,6 @@
 # 🌾 Multipurpose Agri-Bot
 
-A modular, Bluetooth-controlled agricultural robot built on an **Arduino Mega 2560**. Designed and fabricated as a 4-wheel skid-steer platform that combines mobility with three interchangeable field operations — grass cutting, water pumping, and a lead-screw actuator for mechanical stretch/retract tasks — aimed at reducing manual labour in small-scale farming.
+A modular, Bluetooth-controlled agricultural robot built on an **Arduino Mega 2560**. Designed and fabricated as a 4-wheel skid-steer platform that combines mobility with four field operations — grass cutting, water pumping, a lead-screw actuator for mechanical stretch/retract tasks, and a scissor mechanism for cutting/harvesting — aimed at reducing manual labour in small-scale farming.
 
 ![Agri-Bot](images/agribot_photo.png)
 
@@ -16,8 +16,9 @@ The Agri-Bot is a ground-up mechatronics build: chassis fabrication, motor/drive
 - ✂️ **Cutter motor** — for grass/vegetation clearing
 - 💧 **Water pump** — for irrigation
 - 🔩 **Lead screw mechanism** — motorized extend/retract for soil prep / attachment positioning
+- ✂️ **Scissor mechanism** — dedicated driver for a cutting/harvesting attachment, independent of the shared implement driver
 - 📶 **Bluetooth wireless control** (HC-05) — joystick for driving, dedicated buttons for implements
-- ⚙️ **High-current motor drivers (BTS7960)** — one pair per wheel side, one shared driver relay-switched across the three implements
+- ⚙️ **High-current motor drivers (BTS7960)** — one pair per wheel side, one shared driver relay-switched across cutter/pump/lead-screw, and one dedicated driver for the scissor
 - 🛑 **Connection failsafe** — motors auto-stop if the Bluetooth link drops
 
 ## Hardware
@@ -25,13 +26,14 @@ The Agri-Bot is a ground-up mechatronics build: chassis fabrication, motor/drive
 | Component | Qty | Purpose |
 |---|---|---|
 | Arduino Mega 2560 | 1 | Main controller |
-| BTS7960 motor driver | 3 | 2x wheel pairs + 1x shared implement driver |
+| BTS7960 motor driver | 4 | 2x wheel pairs + 1x shared implement driver + 1x dedicated scissor driver |
 | HC-05 Bluetooth module | 1 | Wireless control link (on `Serial1`) |
 | 3-channel relay module | 1 | Selects which implement is connected to the shared driver |
 | DC gear motors (wheels) | 4 | Drive, wired as left pair / right pair |
 | DC motor (cutter) | 1 | Grass cutting attachment |
 | DC motor (pump) | 1 | Water pump |
 | DC motor (lead screw) | 1 | Linear extend/retract actuator |
+| DC motor (scissor) | 1 | Dedicated cutting/harvesting mechanism |
 | Li-ion battery packs | 2 | Power supply |
 | Chassis (fabricated) | 1 | Modeled in Fusion 360, built in-house |
 
@@ -43,11 +45,12 @@ The Agri-Bot is a ground-up mechatronics build: chassis fabrication, motor/drive
 | Left driver RPWM / LPWM / EN | 2 / 3 / 22 | Drives left wheel pair |
 | Right driver RPWM / LPWM / EN | 4 / 5 / 23 | Drives right wheel pair |
 | Aux driver RPWM / LPWM / EN | 6 / 7 / 24 | Shared across cutter/pump/lead screw |
+| Scissor driver RPWM / LPWM / EN | 8 / 9 / 25 | Dedicated — not on the aux relay |
 | Relay — Cutter | 26 | Active-LOW relay module |
 | Relay — Pump | 27 | Active-LOW relay module |
 | Relay — Lead screw | 28 | Active-LOW relay module |
 
-> The shared aux BTS7960 drives whichever implement's relay is closed — only one relay is ever active at a time, so cutter, pump, and lead screw never run simultaneously.
+> The shared aux BTS7960 drives whichever implement's relay is closed — only one relay is ever active at a time, so cutter, pump, and lead screw never run simultaneously. The scissor has its own driver, so it can run independently of the other three implements.
 
 ## Control Scheme
 
@@ -70,6 +73,8 @@ Controlled via the **[Arduino Bluetooth Controller](https://play.google.com/stor
 | 2 | `2` | — | Toggle pump on/off |
 | 3 | `3` | `e` | Lead screw extend (momentary — runs while held) |
 | 4 | `4` | `r` | Lead screw retract (momentary — runs while held) |
+| 5 | `5` | `x` | Scissor expand (momentary — runs while held) |
+| 6 | `6` | `y` | Scissor retract (momentary — runs while held) |
 
 ## Design
 
