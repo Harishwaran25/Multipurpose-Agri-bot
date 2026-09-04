@@ -1,25 +1,28 @@
 # 🌾 Multipurpose Agri-Bot
 
-A modular, Bluetooth-controlled agricultural robot built on an **Arduino Mega 2560**. Designed and fabricated as a 4-wheel skid-steer platform that combines mobility with four field operations — grass cutting, water pumping, a lead-screw actuator for mechanical stretch/retract tasks, and a scissor mechanism for cutting/harvesting — aimed at reducing manual labour in small-scale farming.
+A modular, Bluetooth-controlled agricultural robot built on an **Arduino Mega 2560**. Designed and fabricated as a 4-wheel platform that combines mobility with six field operations — grass cutting, weeding, fertilizing, seed dispensing (gate + rotation), a height-adjustable frame, and a scissor cutting/harvesting mechanism — aimed at reducing manual labour in small-scale farming.
 
 ![Agri-Bot](images/agribot_photo.png)
 
 ## Overview
 
-The Agri-Bot is a ground-up mechatronics build: chassis fabrication, motor/driver selection, power distribution, and embedded control, all done independently. It's controlled wirelessly over Bluetooth using a joystick-style interface for movement and dedicated commands for implement control.
+The Agri-Bot is a ground-up mechatronics build: chassis fabrication, motor/driver selection, power distribution, and embedded control, all done independently. It's controlled wirelessly over Bluetooth using a custom **MIT App Inventor** app with dedicated buttons for driving and for each implement.
 
 **Key result:** reduced manual labour by ~60% during prototype field testing (ploughing/irrigation-prep tasks timed against manual work).
 
 ## Features
 
-- 🚗 **4-wheel skid-steer drive** — independent left/right motor pairing for tank-style turning
-- ✂️ **Cutter motor** — for grass/vegetation clearing
-- 💧 **Water pump** — for irrigation
-- 🔩 **Lead screw mechanism** — motorized extend/retract for soil prep / attachment positioning
-- ✂️ **Scissor mechanism** — dedicated driver for a cutting/harvesting attachment, independent of the shared implement driver
-- 📶 **Bluetooth wireless control** (HC-05) — joystick for driving, dedicated buttons for implements
-- ⚙️ **High-current motor drivers (BTS7960)** — one pair per wheel side, one shared driver relay-switched across cutter/pump/lead-screw, and one dedicated driver for the scissor
-- 🛑 **Connection failsafe** — motors auto-stop if the Bluetooth link drops
+- 🚗 **4-wheel drive** — independent left/right motor pairing, discrete Forward/Backward/Left/Right/Stop control
+- 🌾 **Grass cutter** — clears vegetation, ON/OFF control
+- 🌱 **Weeder** — removes weeds, ON/OFF control
+- 💧 **Fertilizing** — dispenses fertilizer, ON/OFF control
+- 🌰 **Seed gate** — toggles the seed release gate open/closed
+- 🔄 **Seed rotation** — toggles the seed-dispensing drum on/off
+- 📏 **Height adjustment** — motorized lead-screw, raises/lowers the implement frame
+- ✂️ **Scissor mechanism** — dedicated driver for a cutting/harvesting attachment, runs independently of the other implements
+- 📶 **Bluetooth wireless control** (HC-05) via a custom App Inventor app
+- ⚙️ **High-current motor drivers (BTS7960)** — one pair per wheel side, one shared driver relay-switched across grass cutter/fertilizing/height/weeder/seed gate/seed rotation, and one dedicated driver for the scissor
+- 🛑 **Connection failsafe** — drive motors auto-stop if the Bluetooth link drops
 
 ## Hardware
 
@@ -28,14 +31,17 @@ The Agri-Bot is a ground-up mechatronics build: chassis fabrication, motor/drive
 | Arduino Mega 2560 | 1 | Main controller |
 | BTS7960 motor driver | 4 | 2x wheel pairs + 1x shared implement driver + 1x dedicated scissor driver |
 | HC-05 Bluetooth module | 1 | Wireless control link (on `Serial1`) |
-| 3-channel relay module | 1 | Selects which implement is connected to the shared driver |
+| 6-channel relay module | 1 | Selects which implement is connected to the shared aux driver |
 | DC gear motors (wheels) | 4 | Drive, wired as left pair / right pair |
-| DC motor (cutter) | 1 | Grass cutting attachment |
-| DC motor (pump) | 1 | Water pump |
-| DC motor (lead screw) | 1 | Linear extend/retract actuator |
+| DC motor (grass cutter) | 1 | Grass cutting attachment |
+| DC motor (weeder) | 1 | Weed removal attachment |
+| DC motor / pump (fertilizing) | 1 | Fertilizer dispensing |
+| Motor/solenoid (seed gate) | 1 | Opens/closes seed release gate |
+| DC motor (seed rotation) | 1 | Drives seed-dispensing drum |
+| DC motor (lead screw / height) | 1 | Linear extend/retract for frame height |
 | DC motor (scissor) | 1 | Dedicated cutting/harvesting mechanism |
 | Li-ion battery packs | 2 | Power supply |
-| Chassis (fabricated) | 1 | Modeled in Fusion 360, built in-house |
+| Chassis (fabricated) | 1 | Modeled in CAD, built in-house |
 
 ## Wiring / Pin Map
 
@@ -44,46 +50,58 @@ The Agri-Bot is a ground-up mechatronics build: chassis fabrication, motor/drive
 | HC-05 RX/TX | `Serial1` (18/19) | HC-05 RX needs a voltage divider (3.3V logic) |
 | Left driver RPWM / LPWM / EN | 2 / 3 / 22 | Drives left wheel pair |
 | Right driver RPWM / LPWM / EN | 4 / 5 / 23 | Drives right wheel pair |
-| Aux driver RPWM / LPWM / EN | 6 / 7 / 24 | Shared across cutter/pump/lead screw |
+| Aux driver RPWM / LPWM / EN | 6 / 7 / 24 | Shared across grass cutter/fertilizing/height/weeder/seed gate/seed rotation |
 | Scissor driver RPWM / LPWM / EN | 8 / 9 / 25 | Dedicated — not on the aux relay |
-| Relay — Cutter | 26 | Active-LOW relay module |
-| Relay — Pump | 27 | Active-LOW relay module |
-| Relay — Lead screw | 28 | Active-LOW relay module |
+| Relay — Grass cutter | 26 | Active-LOW relay module |
+| Relay — Fertilizing | 27 | Active-LOW relay module |
+| Relay — Height (lead screw) | 28 | Active-LOW relay module |
+| Relay — Weeder | 29 | Active-LOW relay module |
+| Relay — Seed gate | 30 | Active-LOW relay module |
+| Relay — Seed rotation | 31 | Active-LOW relay module |
 
-> The shared aux BTS7960 drives whichever implement's relay is closed — only one relay is ever active at a time, so cutter, pump, and lead screw never run simultaneously. The scissor has its own driver, so it can run independently of the other three implements.
+> The shared aux BTS7960 drives whichever implement's relay is closed — only one relay is ever active at a time, so grass cutter, fertilizing, height, weeder, seed gate, and seed rotation never run simultaneously. The scissor has its own dedicated driver, so it can run independently of the other six.
 
 ## Control Scheme
 
-Controlled via the **[Arduino Bluetooth Controller](https://play.google.com/store/apps/details?id=braulio.calle.bluetoothRCcontroller)** app (Broxcode) over the HC-05 link.
+Controlled via a custom **MIT App Inventor** Bluetooth app over the HC-05 link.
 
-**Joystick (movement):**
+**Drive:**
 
 | Command | Action |
 |---|---|
 | `F` / `B` | Forward / Backward |
 | `L` / `R` | Spin left / right |
-| `G` / `I` / `H` / `J` | Diagonal forward-left / forward-right / back-left / back-right |
 | `S` | Stop |
 
-**Buttons (implements):**
+**Implements (shared aux driver, one active at a time):**
 
 | Button | Press sends | Release sends | Action |
 |---|---|---|---|
-| 1 | `1` | — | Toggle cutter on/off |
-| 2 | `2` | — | Toggle pump on/off |
-| 3 | `3` | `e` | Lead screw extend (momentary — runs while held) |
-| 4 | `4` | `r` | Lead screw retract (momentary — runs while held) |
-| 5 | `5` | `x` | Scissor expand (momentary — runs while held) |
-| 6 | `6` | `y` | Scissor retract (momentary — runs while held) |
+| Grass Cutter ON / OFF | `1` | `q` | Toggle grass cutter |
+| Fertilizing ON / OFF | `2` | `p` | Toggle fertilizing |
+| Weeder ON / OFF | `w` | `v` | Toggle weeder |
+| Height Up | `3` | `e` | Raise frame (momentary — runs while held) |
+| Height Down | `4` | `r` | Lower frame (momentary — runs while held) |
+| Seed Gate | `g` | — | Single button, toggles gate open/closed |
+| Seed Rotation | `o` | — | Single button, toggles seed drum on/off |
+
+**Scissor (dedicated driver, independent of aux):**
+
+| Button | Press sends | Release sends | Action |
+|---|---|---|---|
+| Expand Scissor | `5` | `x` | Momentary — runs while held |
+| Retract Scissor | `6` | `y` | Momentary — runs while held |
+
+> ⚠️ These command characters are what the firmware expects. Double-check each button's `BluetoothClient1.Send1Text` block in App Inventor sends the matching character.
 
 ## Design
 
-The chassis and mounting brackets were modeled in **Fusion 360** before fabrication, allowing the layout (battery placement, driver mounting, water tank position, lead-screw travel) to be validated before building.
+The chassis and mounting brackets were modeled in CAD before fabrication — a 4-wheel base frame with a raised height-adjustable deck carrying the seed hopper/tube assembly, and a folding X-frame scissor mechanism at the front, allowing the layout to be validated before building.
 
 ## Repository Structure
 
 ```
-Agri-Bot/
+Multipurpose-Agri-bot/
 ├── src/
 │   └── AgriBot_Mega2560.ino   # Main firmware
 ├── images/
@@ -100,12 +118,11 @@ Agri-Bot/
 3. Select **Board → Arduino Mega or Mega 2560** and the correct COM port.
 4. Upload the sketch.
 5. Pair your phone with the HC-05 (default PIN usually `1234` or `0000`).
-6. Open the Arduino Bluetooth Controller app, configure the buttons as above, connect, and drive.
+6. Open the App Inventor app, confirm each button sends the command characters listed above, connect, and drive.
 
 ## Future Improvements
 
-- [ ] Add limit switches on the lead screw to auto-stop at full extend/retract
-- [ ] Replace app-based control with a custom mobile app / web dashboard
+- [ ] Add limit switches on the lead screw / height mechanism to auto-stop at full travel
 - [ ] Add current sensing on the BTS7960 modules for stall/overload protection
 - [ ] Onboard soil-moisture or camera-based autonomy for reduced manual driving
 

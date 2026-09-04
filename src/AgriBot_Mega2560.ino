@@ -2,20 +2,28 @@
   ===========================================================================
   MULTIPURPOSE AGRI-BOT — Arduino Mega 2560
   ===========================================================================
-  Control: Bluetooth (HC-05) via "Arduino Bluetooth Controller" app (Broxcode)
-           - Joystick pad  -> movement (skid-steer, left pair / right pair)
-           - Buttons 1-4   -> cutter, pump, lead screw extend/retract
-           - Buttons 5-6   -> scissor expand/retract
+  Control: Bluetooth (HC-05) via a custom MIT App Inventor app.
+           - Forward / Backward / Left / Right / Stop -> discrete drive buttons
+           - Expand Scissor / Retract Scissor  -> dedicated scissor driver
+           - Height Up / Height Down           -> lead-screw height actuator
+           - Fertilizing ON / OFF              -> aux driver, relay-selected
+           - Weeder ON / OFF                   -> aux driver, relay-selected
+           - Grass Cutter ON / OFF             -> aux driver, relay-selected
+           - Seed Gate (single button, toggles open/closed)
+           - Seed Rotation (single button, toggles on/off)
 
   Drivers: 4x BTS7960 high-current motor drivers
            #1 -> Left wheel pair (2 motors wired in parallel)
            #2 -> Right wheel pair (2 motors wired in parallel)
-           #3 -> Shared "aux" driver. A 3-channel relay module selects which
-                 single motor (cutter / pump / lead screw) is actually
-                 connected to its output at any given time — only one relay
-                 is ever closed at once, so only one aux motor runs at once.
+           #3 -> Shared "aux" driver. A 6-channel relay module selects which
+                 single motor (grass cutter / fertilizing pump / height
+                 lead-screw / weeder / seed gate / seed rotation) is
+                 actually connected to its output at any given time — only
+                 one relay is ever closed at once, so only one aux
+                 implement runs at once.
            #4 -> Dedicated driver for the scissor mechanism (separate
-                 implement, not routed through the aux relay selector).
+                 implement, not routed through the aux relay selector — can
+                 run at the same time as an aux implement).
 
   HC-05:   Wired to Serial1 (TX1=pin18, RX1=pin19) — Mega has 4 hardware
            UARTs, so no SoftwareSerial needed. Wire HC-05 TX -> Mega RX1,
@@ -46,9 +54,12 @@ const int SCISSOR_LPWM = 9;
 const int SCISSOR_EN   = 25;   // tie BTS7960 R_EN + L_EN together to this pin
 
 // ---------- RELAYS: select which implement is on the aux driver ----------
-const int RELAY_CUTTER    = 26;
-const int RELAY_PUMP      = 27;
-const int RELAY_LEADSCREW = 28;
+const int RELAY_GRASSCUTTER  = 26;
+const int RELAY_FERTILIZING  = 27;
+const int RELAY_HEIGHT       = 28;
+const int RELAY_WEEDER       = 29;
+const int RELAY_SEEDGATE     = 30;
+const int RELAY_SEEDROTATION = 31;
 // NOTE: most relay modules are ACTIVE-LOW (LOW = relay closed/ON).
 // If yours is active-HIGH, swap RELAY_ON/RELAY_OFF below.
 const int RELAY_ON  = LOW;
@@ -56,12 +67,12 @@ const int RELAY_OFF = HIGH;
 
 // ---------- SPEEDS (0-255) ----------
 const int DRIVE_SPEED   = 180;   // wheel motor speed
-const int AUX_SPEED     = 200;   // cutter/pump/lead-screw speed
+const int AUX_SPEED     = 200;   // shared aux implement speed
 const int SCISSOR_SPEED = 200;   // scissor expand/retract speed
 
-// ---------- STATE ----------
-bool cutterOn = false;
-bool pumpOn   = false;
+// ---------- STATE (only needed for the single-button toggle implements) ----------
+bool seedGateOn     = false;
+bool seedRotationOn = false;
 
 // Failsafe: stop everything if no command received for this long (ms)
 const unsigned long CMD_TIMEOUT = 1000;
@@ -71,17 +82,17 @@ void setup() {
   Serial.begin(9600);     // USB debug
   Serial1.begin(9600);    // HC-05 (match your module's baud rate)
 
-  pinMode(LEFT_RPWM, OUTPUT);  pinMode(LEFT_LPWM, OUTPUT);  pinMode(LEFT_EN, OUTPUT);
-  pinMode(RIGHT_RPWM, OUTPUT); pinMode(RIGHT_LPWM, OUTPUT); pinMode(RIGHT_EN, OUTPUT);
-  pinMode(AUX_RPWM, OUTPUT);   pinMode(AUX_LPWM, OUTPUT);   pinMode(AUX_EN, OUTPUT);
+  pinMode(LEFT_RPWM, OUTPUT);    pinMode(LEFT_LPWM, OUTPUT);    pinMode(LEFT_EN, OUTPUT);
+  pinMode(RIGHT_RPWM, OUTPUT);   pinMode(RIGHT_LPWM, OUTPUT);   pinMode(RIGHT_EN, OUTPUT);
+  pinMode(AUX_RPWM, OUTPUT);     pinMode(AUX_LPWM, OUTPUT);     pinMode(AUX_EN, OUTPUT);
   pinMode(SCISSOR_RPWM, OUTPUT); pinMode(SCISSOR_LPWM, OUTPUT); pinMode(SCISSOR_EN, OUTPUT);
 
-  pinMode(RELAY_CUTTER, OUTPUT);
-  pinMode(RELAY_PUMP, OUTPUT);
-  pinMode(RELAY_LEADSCREW, OUTPUT);
-  digitalWrite(RELAY_CUTTER, RELAY_OFF);
-  digitalWrite(RELAY_PUMP, RELAY_OFF);
-  digitalWrite(RELAY_LEADSCREW, RELAY_OFF);
+  pinMode(RELAY_GRASSCUTTER, OUTPUT);
+  pinMode(RELAY_FERTILIZING, OUTPUT);
+  pinMode(RELAY_HEIGHT, OUTPUT);
+  pinMode(RELAY_WEEDER, OUTPUT);
+  pinMode(RELAY_SEEDGATE, OUTPUT);
+  pinMode(RELAY_SEEDROTATION, OUTPUT);
 
   digitalWrite(LEFT_EN, HIGH);
   digitalWrite(RIGHT_EN, HIGH);
@@ -108,69 +119,51 @@ void loop() {
 
 void handleCommand(char cmd) {
   switch (cmd) {
-    // ---- Joystick: movement (standard Bluetooth Controller app codes) ----
+    // ---- Drive (discrete buttons) ----
     case 'F': driveLeft(DRIVE_SPEED);  driveRight(DRIVE_SPEED);  break; // forward
     case 'B': driveLeft(-DRIVE_SPEED); driveRight(-DRIVE_SPEED); break; // backward
     case 'L': driveLeft(-DRIVE_SPEED); driveRight(DRIVE_SPEED);  break; // spin left
     case 'R': driveLeft(DRIVE_SPEED);  driveRight(-DRIVE_SPEED); break; // spin right
-    case 'G': driveLeft(DRIVE_SPEED/2); driveRight(DRIVE_SPEED); break; // fwd-left
-    case 'I': driveLeft(DRIVE_SPEED);  driveRight(DRIVE_SPEED/2); break; // fwd-right
-    case 'H': driveLeft(-DRIVE_SPEED/2); driveRight(-DRIVE_SPEED); break; // back-left
-    case 'J': driveLeft(-DRIVE_SPEED); driveRight(-DRIVE_SPEED/2); break; // back-right
-    case 'S': driveLeft(0); driveRight(0); break; // stop (joystick released)
+    case 'S': driveLeft(0); driveRight(0); break;                      // stop
 
-    // ---- Button 1: cutter toggle ----
-    case '1':
-      cutterOn = !cutterOn;
-      if (cutterOn) { selectAux(RELAY_CUTTER); auxRun(AUX_SPEED); }
-      else          { auxRun(0); allRelaysOff(); }
-      break;
+    // ---- Grass Cutter ON / OFF ----
+    case '1': selectAux(RELAY_GRASSCUTTER); auxRun(AUX_SPEED); break; // ON
+    case 'q': auxRun(0); allRelaysOff(); break;                        // OFF
 
-    // ---- Button 2: pump toggle ----
-    case '2':
-      pumpOn = !pumpOn;
-      if (pumpOn) { selectAux(RELAY_PUMP); auxRun(AUX_SPEED); }
-      else        { auxRun(0); allRelaysOff(); }
-      break;
+    // ---- Fertilizing ON / OFF ----
+    case '2': selectAux(RELAY_FERTILIZING); auxRun(AUX_SPEED); break; // ON
+    case 'p': auxRun(0); allRelaysOff(); break;                        // OFF
 
-    // ---- Button 3: lead screw EXTEND (momentary — set app to send '3'
-    //      on press and 'e' on release) ----
-    case '3':
-      selectAux(RELAY_LEADSCREW);
-      auxRun(AUX_SPEED);
-      break;
-    case 'e':
-      auxRun(0);
-      allRelaysOff();
-      break;
+    // ---- Weeder ON / OFF ----
+    case 'w': selectAux(RELAY_WEEDER); auxRun(AUX_SPEED); break;       // ON
+    case 'v': auxRun(0); allRelaysOff(); break;                        // OFF
 
-    // ---- Button 4: lead screw RETRACT (momentary — '4' on press,
-    //      'r' on release) ----
-    case '4':
-      selectAux(RELAY_LEADSCREW);
-      auxRun(-AUX_SPEED);
-      break;
-    case 'r':
-      auxRun(0);
-      allRelaysOff();
+    // ---- Height Up / Down (momentary — set app to send '3'/'4' on press
+    //      and 'e'/'r' on release, runs while held) ----
+    case '3': selectAux(RELAY_HEIGHT); auxRun(AUX_SPEED);  break; // up (extend)
+    case 'e': auxRun(0); allRelaysOff(); break;
+    case '4': selectAux(RELAY_HEIGHT); auxRun(-AUX_SPEED); break; // down (retract)
+    case 'r': auxRun(0); allRelaysOff(); break;
+
+    // ---- Scissor Expand / Retract (dedicated driver, momentary —
+    //      '5'/'6' on press, 'x'/'y' on release) ----
+    case '5': scissorRun(SCISSOR_SPEED);  break; // expand
+    case 'x': scissorRun(0); break;
+    case '6': scissorRun(-SCISSOR_SPEED); break; // retract
+    case 'y': scissorRun(0); break;
+
+    // ---- Seed Gate (single button — toggles open/closed) ----
+    case 'g':
+      seedGateOn = !seedGateOn;
+      if (seedGateOn) { selectAux(RELAY_SEEDGATE); auxRun(AUX_SPEED); }
+      else            { auxRun(0); allRelaysOff(); }
       break;
 
-    // ---- Button 5: scissor EXPAND (momentary — '5' on press, 'x' on
-    //      release). Dedicated driver, independent of the aux relay. ----
-    case '5':
-      scissorRun(SCISSOR_SPEED);
-      break;
-    case 'x':
-      scissorRun(0);
-      break;
-
-    // ---- Button 6: scissor RETRACT (momentary — '6' on press, 'y' on
-    //      release) ----
-    case '6':
-      scissorRun(-SCISSOR_SPEED);
-      break;
-    case 'y':
-      scissorRun(0);
+    // ---- Seed Rotation (single button — toggles on/off) ----
+    case 'o':
+      seedRotationOn = !seedRotationOn;
+      if (seedRotationOn) { selectAux(RELAY_SEEDROTATION); auxRun(AUX_SPEED); }
+      else                 { auxRun(0); allRelaysOff(); }
       break;
 
     default:
@@ -210,9 +203,12 @@ void selectAux(int relayPin) {
 }
 
 void allRelaysOff() {
-  digitalWrite(RELAY_CUTTER, RELAY_OFF);
-  digitalWrite(RELAY_PUMP, RELAY_OFF);
-  digitalWrite(RELAY_LEADSCREW, RELAY_OFF);
+  digitalWrite(RELAY_GRASSCUTTER, RELAY_OFF);
+  digitalWrite(RELAY_FERTILIZING, RELAY_OFF);
+  digitalWrite(RELAY_HEIGHT, RELAY_OFF);
+  digitalWrite(RELAY_WEEDER, RELAY_OFF);
+  digitalWrite(RELAY_SEEDGATE, RELAY_OFF);
+  digitalWrite(RELAY_SEEDROTATION, RELAY_OFF);
 }
 
 void stopAll() {
@@ -221,6 +217,6 @@ void stopAll() {
   auxRun(0);
   scissorRun(0);
   allRelaysOff();
-  cutterOn = false;
-  pumpOn = false;
+  seedGateOn = false;
+  seedRotationOn = false;
 }
