@@ -1,4 +1,4 @@
-# 🌾 Multipurpose Agri-Bot
+#  Multipurpose Agri-Bot
 
 A modular, Bluetooth-controlled agricultural robot built on an **Arduino Mega 2560**. Designed and fabricated as a 4-wheel platform that combines mobility with six field operations — grass cutting, weeding, fertilizing, seed dispensing (gate + rotation), a height-adjustable frame, and a scissor cutting/harvesting mechanism — aimed at reducing manual labour in small-scale farming.
 
@@ -8,21 +8,19 @@ A modular, Bluetooth-controlled agricultural robot built on an **Arduino Mega 25
 
 The Agri-Bot is a ground-up mechatronics build: chassis fabrication, motor/driver selection, power distribution, and embedded control, all done independently. It's controlled wirelessly over Bluetooth using a custom **MIT App Inventor** app with dedicated buttons for driving and for each implement.
 
-**Key result:** reduced manual labour by ~60% during prototype field testing (ploughing/irrigation-prep tasks timed against manual work).
+**Key result:** Reduced manual labour by ~60% during prototype field testing (ploughing/irrigation-prep tasks timed against manual work).
 
 ## Features
 
-- 🚗 **4-wheel drive** — independent left/right motor pairing, discrete Forward/Backward/Left/Right/Stop control
-- 🌾 **Grass cutter** — clears vegetation, ON/OFF control
-- 🌱 **Weeder** — removes weeds, ON/OFF control
-- 💧 **Fertilizing** — dispenses fertilizer, ON/OFF control
-- 🌰 **Seed gate** — toggles the seed release gate open/closed
-- 🔄 **Seed rotation** — toggles the seed-dispensing drum on/off
-- 📏 **Height adjustment** — motorized lead-screw, raises/lowers the implement frame
-- ✂️ **Scissor mechanism** — dedicated driver for a cutting/harvesting attachment, runs independently of the other implements
-- 📶 **Bluetooth wireless control** (HC-05) via a custom App Inventor app
-- ⚙️ **High-current motor drivers (BTS7960)** — one pair per wheel side, one shared driver relay-switched across grass cutter/fertilizing/height/weeder/seed gate/seed rotation, and one dedicated driver for the scissor
-- 🛑 **Connection failsafe** — drive motors auto-stop if the Bluetooth link drops
+
+- **4-wheel skid-steer drive** — independent left/right motor pairing for tank-style turning
+- **Cutter motor** — for grass/vegetation clearing
+- **Water pump** — for irrigation
+- **Lead screw mechanism** — motorized extend/retract for soil prep / attachment positioning
+- **Scissor mechanism** — dedicated driver for a cutting/harvesting attachment, independent of the shared implement driver
+- **Bluetooth wireless control** (HC-05) — joystick for driving, dedicated buttons for implements
+- **High-current motor drivers (BTS7960)** — one pair per wheel side, one shared driver relay-switched across cutter/pump/lead-screw, and one dedicated driver for the scissor
+- **Connection failsafe** — motors auto-stop if the Bluetooth link drops
 
 ## Hardware
 
