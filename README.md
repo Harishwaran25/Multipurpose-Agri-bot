@@ -126,8 +126,8 @@ Multipurpose-Agri-bot/
 
 ## Author
 
-Harishwaran T
-Kishore K I
+Harishwaran T/n
+Kishore K I/n
 Sri Raam H M
 
 ## License
