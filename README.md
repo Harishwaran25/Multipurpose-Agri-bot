@@ -126,7 +126,9 @@ Multipurpose-Agri-bot/
 
 ## Author
 
-Built independently — mechanical design, fabrication, and embedded firmware.
+Harishwaran T
+Kishore K I
+Sri Raam H M
 
 ## License
 
