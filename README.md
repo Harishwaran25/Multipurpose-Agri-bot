@@ -1,17 +1,16 @@
 #  Multipurpose Agri-Bot
 
-A modular, Bluetooth-controlled agricultural robot built on an **Arduino Mega 2560**. Designed and fabricated as a 4-wheel platform that combines mobility with six field operations — grass cutting, weeding, fertilizing, seed dispensing (gate + rotation), a height-adjustable frame, and a scissor cutting/harvesting mechanism — aimed at reducing manual labour in small-scale farming.
+A modular, Bluetooth-controlled agricultural robot built on an **Arduino Mega 2560**. Designed and fabricated as a 4-wheel platform that combines mobility with six field operations — grass cutting, weeding, fertilizing, seed dispensing, height adjustment, and a dedicated scissor mechanism for harvesting.
 
 ![Agri-Bot](images/agribot_photo.png)
 
 ## Overview
 
-The Agri-Bot is a ground-up mechatronics build: chassis fabrication, motor/driver selection, power distribution, and embedded control, all done independently. It's controlled wirelessly over Bluetooth using a custom **MIT App Inventor** app with dedicated buttons for driving and for each implement.
+The Agri-Bot is a ground-up mechatronics build: chassis fabrication, motor/driver selection, power distribution, and embedded control, all done independently. It's controlled wirelessly over Bluetooth, allowing remote operation from up to 10 meters away. The modular architecture makes it easy to swap implements and adapt to different agricultural tasks.
 
 **Key result:** Reduced manual labour by ~60% during prototype field testing (ploughing/irrigation-prep tasks timed against manual work).
 
 ## Features
-
 
 - **4-wheel skid-steer drive** — independent left/right motor pairing for tank-style turning
 - **Cutter motor** — for grass/vegetation clearing
@@ -38,7 +37,7 @@ The Agri-Bot is a ground-up mechatronics build: chassis fabrication, motor/drive
 | DC motor (seed rotation) | 1 | Drives seed-dispensing drum |
 | DC motor (lead screw / height) | 1 | Linear extend/retract for frame height |
 | DC motor (scissor) | 1 | Dedicated cutting/harvesting mechanism |
-| Li-ion battery packs | 2 | Power supply |
+| Li-ion battery packs | 2 | Power supply (48V total) |
 | Chassis (fabricated) | 1 | Modeled in CAD, built in-house |
 
 ## Wiring / Pin Map
@@ -57,7 +56,48 @@ The Agri-Bot is a ground-up mechatronics build: chassis fabrication, motor/drive
 | Relay — Seed gate | 30 | Active-LOW relay module |
 | Relay — Seed rotation | 31 | Active-LOW relay module |
 
-> The shared aux BTS7960 drives whichever implement's relay is closed — only one relay is ever active at a time, so grass cutter, fertilizing, height, weeder, seed gate, and seed rotation never run simultaneously. The scissor has its own dedicated driver, so it can run independently of the other six.
+> The shared aux BTS7960 drives whichever implement's relay is closed — only one relay is ever active at a time, so grass cutter, fertilizing, height, weeder, seed gate, and seed rotation never run simultaneously.
+
+### Hardware Connection Details
+
+#### Motor Driver Configuration (BTS7960)
+
+Each BTS7960 module has three control pins:
+- **RPWM** (Right PWM): Controls forward rotation
+- **LPWM** (Left PWM): Controls backward rotation
+- **EN** (Enable): Global enable/disable for the driver
+
+**Connection Steps:**
+1. Connect RPWM and LPWM pins to Arduino PWM pins (2-13)
+2. Connect EN pin to a standard digital pin for on/off control
+3. Ensure a common ground between Arduino and BTS7960
+4. Supply 12V-48V to the motor power pins depending on motor specifications
+
+#### Relay Module Wiring
+
+The 6-channel relay module operates with **active-LOW logic**:
+- **Signal pin LOW** → Relay **CLOSES** (implement runs)
+- **Signal pin HIGH** → Relay **OPENS** (implement stops)
+
+**Connection:**
+1. Connect each relay signal pin to Arduino pins 26-31
+2. Connect relay GND to Arduino GND
+3. Connect relay VCC to Arduino 5V
+4. Each relay output connects to one implement motor through the aux driver
+
+#### HC-05 Bluetooth Module
+
+- **TX pin** → Arduino RX1 (Pin 19)
+- **RX pin** → Arduino TX1 (Pin 18) **through a voltage divider** (5V to 3.3V)
+  - Voltage divider: Use 1kΩ and 2kΩ resistors to drop 5V → 3.3V
+- **VCC** → Arduino 5V
+- **GND** → Arduino GND
+
+#### Power Distribution
+
+- **Main battery (48V):** Powers all BTS7960 drivers
+- **5V buck converter:** Powers Arduino, HC-05, and relay module
+- **Ground plane:** Ensure all ground connections are properly distributed to avoid noise issues
 
 ## Control Scheme
 
@@ -94,7 +134,7 @@ Controlled via a custom **MIT App Inventor** Bluetooth app over the HC-05 link.
 
 ## Design
 
-The chassis and mounting brackets were modeled in CAD before fabrication — a 4-wheel base frame with a raised height-adjustable deck carrying the seed hopper/tube assembly, and a folding X-frame scissor mechanism at the front, allowing the layout to be validated before building.
+The chassis and mounting brackets were modeled in CAD before fabrication — a 4-wheel base frame with a raised height-adjustable deck carrying the seed hopper/tube assembly, and a folding X-frame for deployment flexibility.
 
 ## Repository Structure
 
