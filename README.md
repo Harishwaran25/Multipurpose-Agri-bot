@@ -4,7 +4,7 @@ A modular, Bluetooth-controlled agricultural robot built on an **Arduino Mega 25
 
 ![Agri-Bot](images/agribot_photo.png)
 
-## Overview
+## Overview section
 
 The Agri-Bot is a ground-up mechatronics build: chassis fabrication, motor/driver selection, power distribution, and embedded control, all done independently. It's controlled wirelessly over Bluetooth using a custom **MIT App Inventor** app with dedicated buttons for driving and for each implement.
 
@@ -22,7 +22,7 @@ The Agri-Bot is a ground-up mechatronics build: chassis fabrication, motor/drive
 - **High-current motor drivers (BTS7960)** — one pair per wheel side, one shared driver relay-switched across cutter/pump/lead-screw, and one dedicated driver for the scissor
 - **Connection failsafe** — motors auto-stop if the Bluetooth link drops
 
-## Hardware
+## Hardware section
 
 | Component | Qty | Purpose |
 |---|---|---|
