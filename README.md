@@ -4,7 +4,7 @@ A modular, Bluetooth-controlled agricultural robot built on an **Arduino Mega 25
 
 ![Agri-Bot](images/agribot_photo.png)
 
-## Overview
+## Overview section
 
 The Agri-Bot is a ground-up mechatronics build: chassis fabrication, motor/driver selection, power distribution, and embedded control, all done independently. It's controlled wirelessly over Bluetooth, allowing remote operation from up to 10 meters away. The modular architecture makes it easy to swap implements and adapt to different agricultural tasks.
 
