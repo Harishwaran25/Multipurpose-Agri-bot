@@ -2,7 +2,18 @@
 
 A modular, Bluetooth-controlled agricultural robot built on an **Arduino Mega 2560**. Designed and fabricated as a 4-wheel platform that combines mobility with six field operations — grass cutting, weeding, fertilizing, seed dispensing, height adjustment, and a dedicated scissor mechanism for harvesting.
 
-![Agri-Bot](images/agribot_photo.png)
+<table align="center">
+  <tr>
+    <td align="center"><img src="images/fusion.png" width="420"/></td>
+    <td align="center"><b>&rarr;</b></td>
+    <td align="center"><img src="images/agribot_photo.png" width="420"/></td>
+  </tr>
+  <tr>
+    <td align="center"><b>Fusion 360 CAD model</b></td>
+    <td></td>
+    <td align="center"><b>Built prototype</b></td>
+  </tr>
+</table>
 
 ## Overview section details
 
