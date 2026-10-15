@@ -10,6 +10,10 @@ The Agri-Bot is a ground-up mechatronics build: chassis fabrication, motor/drive
 
 **Key result:** Reduced manual labour by ~60% during prototype field testing (ploughing/irrigation-prep tasks timed against manual work).
 
+## System Flowchart
+
+![System Flowchart](images/system_flowchart.png)
+
 ## Features
 
 - **4-wheel skid-steer drive** — independent left/right motor pairing for tank-style turning
