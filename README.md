@@ -36,6 +36,12 @@ The Agri-Bot is a ground-up mechatronics build: chassis fabrication, motor/drive
 - **High-current motor drivers (BTS7960)** — one pair per wheel side, one shared driver relay-switched across cutter/pump/lead-screw, and one dedicated driver for the scissor
 - **Connection failsafe** — motors auto-stop if the Bluetooth link drops
 
+## Working Demo
+
+![Agri-Bot Working Demo](images/working_demo.gif)
+
+[▶ Watch the full video](videos/working_demo.mp4)
+
 ## Hardware selection 
 
 | Component | Qty | Purpose |
