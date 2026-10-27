@@ -61,7 +61,7 @@ The Agri-Bot is a ground-up mechatronics build: chassis fabrication, motor/drive
 | Li-ion battery packs | 2 | Power supply (48V total) |
 | Chassis (fabricated) | 1 | Modeled in CAD, built in-house |
 
-## Wiring / Pin Map
+## Wiring
 
 | Signal | Mega Pin | Notes |
 |---|---|---|
